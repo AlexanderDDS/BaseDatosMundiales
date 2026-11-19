@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS ddbb.ProtagonizaEvento (
     ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-\echo 'Pasando los datos a tablas finales (por ahora solo lo hemos hecho para Mundial)'
+\echo 'Pasando los datos a tablas finales'
 
 INSERT INTO ddbb.Mundial (
     anio,
@@ -143,7 +143,98 @@ INSERT INTO ddbb.Mundial (
 SELECT
     TRIM(Year)::INT,
     Country,
-    REPLACE(TRIM(Attendance), '.', '')::INT
+    REPLACE(Attendance, '.', '')::INT
 FROM ddbb.Mundial_temporal;
+
+INSERT INTO ddbb.Equipo (
+    iniciales,
+    nombre
+)
+SELECT
+    TRIM(Home_Team_Initials),
+    TRIM(Home_Team_Name)
+FROM ddbb.Partido_temporal
+UNION
+SELECT
+    TRIM(Away_Team_Initials),
+    TRIM(Away_Team_Name)
+FROM ddbb.Partido_temporal;
+
+INSERT INTO ddbb.Partido(
+    fecha_hora,
+    estadio,
+    etapa,
+    ciudad,
+    asistencia,
+    arbitro,
+    anio_mundial,
+    iniciales_equipo_local,
+    iniciales_equipo_visitante
+)
+SELECT DISTINCT
+    TO_TIMESTAMP(TRIM(Datetime), 'DD Mon YYYY - HH24:MI')::TIMESTAMP,
+    TRIM(Stadium),
+    TRIM(Stage),
+    TRIM(City),
+    REPLACE(Attendance, '.', '')::INT,
+    TRIM(Referee),
+    TRIM(Year)::INT,
+    TRIM(Home_Team_Initials),
+    TRIM(Away_Team_Initials)
+FROM ddbb.Partido_temporal;
+
+INSERT INTO ddbb.Jugador (
+    nombre,
+    iniciales_equipo
+)
+SELECT DISTINCT ON (j.PlayerName)
+    j.PlayerName,
+    j.TeamInitials
+FROM ddbb.Jugador_temporal j
+JOIN ddbb.Partido_temporal p
+    ON j.MatchID = p.MatchID
+ORDER BY j.PlayerName, p.Year ASC;
+
+INSERT INTO ddbb.Juega (
+    nombre_jugador,
+    fecha_hora_partido,
+    estadio_partido,
+    num_camiseta,
+    suplente_titular,
+    posicion
+)
+SELECT DISTINCT
+    TRIM(j.PlayerName),
+    TO_TIMESTAMP(p.Datetime, 'DD Mon YYYY - HH24:MI'),
+    p.Stadium,
+    TRIM(j.ShirtNumber)::INT,
+    j.Lineup,
+    j.Position
+FROM ddbb.Jugador_temporal j
+JOIN ddbb.Partido_temporal p ON j.MatchID = p.MatchID;
+
+INSERT INTO ddbb.ProtagonizaEvento (
+    nombre_jugador,
+    fecha_hora_partido,
+    estadio_partido,
+    tipo,
+    minuto
+)
+SELECT DISTINCT 
+    j.PlayerName,
+    TO_TIMESTAMP(p.Datetime, 'DD Mon YYYY - HH24:MI'),
+    p.Stadium,
+    SUBSTRING(regexp_split_to_table(j.Event, '\s+') FROM '^[A-Z]+')::TEXT,
+    SUBSTRING(regexp_split_to_table(j.Event, '\s+') FROM '[0-9]+')::INT
+FROM ddbb.Jugador_temporal j
+JOIN ddbb.Partido_temporal p ON j.MatchID = p.MatchID;
+
+--Consulta 1: Obtener el listado de todos los partidos de la final ("Final") ordenados del más reciente al más antiguo
+
+
+--Consulta 2: Mostrar todos los eventos de gol ('G') o gol en propia puerta ('OG') que ocurrieron en los primeros 10 minutos de un partido
+--Consulta 3: Contar cuántos partidos se han jugado en cada estadio y ciudad, mostrando los 5 estadios con más partidos en la historia
+--Consulta 4: Mostrar los 10 jugadores que han recibido más tarjetas, tanto rojas ('R') como amarillas ('Y')
+--Consulta 5: Listar los nombres de los jugadores que han marcado al menos un gol ('G') en una final de un mundial
 
 ROLLBACK;
