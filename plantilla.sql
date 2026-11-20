@@ -229,12 +229,75 @@ SELECT DISTINCT
 FROM ddbb.Jugador_temporal j
 JOIN ddbb.Partido_temporal p ON j.MatchID = p.MatchID;
 
---Consulta 1: Obtener el listado de todos los partidos de la final ("Final") ordenados del más reciente al más antiguo
-
+--Consulta 1: Obtener el listado de todos los partidos de la final ('Final') ordenados del más reciente al más antiguo
+SELECT
+    p.fecha_hora,
+    p.estadio
+FROM ddbb.Partido p
+WHERE p.etapa LIKE 'Final'
+ORDER BY p.fecha_hora DESC;
 
 --Consulta 2: Mostrar todos los eventos de gol ('G') o gol en propia puerta ('OG') que ocurrieron en los primeros 10 minutos de un partido
---Consulta 3: Contar cuántos partidos se han jugado en cada estadio y ciudad, mostrando los 5 estadios con más partidos en la historia
---Consulta 4: Mostrar los 10 jugadores que han recibido más tarjetas, tanto rojas ('R') como amarillas ('Y')
---Consulta 5: Listar los nombres de los jugadores que han marcado al menos un gol ('G') en una final de un mundial
+SELECT
+    e.tipo,
+    e.minuto,
+    e.nombre_jugador,
+    e.fecha_hora_partido,
+    e.estadio_partido
+FROM ddbb.ProtagonizaEvento e
+WHERE (e.tipo = 'G' OR e.tipo = 'OG') AND e.minuto <= 10;
+
+--Consulta 3: En que estadio y ciudad se jugó la final de Mexico 86’
+
+--Consulta 4: Mostrar el primer partido del mundial de 1970(equipos, fecha y horas, estadio)
+
+--Consulta 5: Mostrar todos los partidos jugados por “MARADONA” incluyendo equipos que juegan el partido, año del mundial, fecha y hora 
+--del partido y estadio. Ordenar todos los partidos por la fecha
+
+--Consulta 6: Contar cuántos partidos se han jugado en cada estadio y ciudad, mostrando los 5 estadios con más partidos en la historia
+SELECT DISTINCT
+    p.estadio,
+    p.ciudad,
+    COUNT(*) AS total_partidos
+FROM ddbb.Partido p
+GROUP BY p.estadio, p.ciudad
+ORDER BY total_partidos DESC, p.estadio ASC
+LIMIT 5;
+
+--Consulta 7: Mostrar los 10 jugadores que han recibido más tarjetas, tanto rojas ('R') como amarillas ('Y')
+SELECT
+    nombre_jugador AS jugador,
+    SUM(1) AS tarjetas
+FROM ddbb.ProtagonizaEvento
+WHERE tipo = 'R' OR tipo = 'Y'
+GROUP BY nombre_jugador
+ORDER BY tarjetas DESC
+LIMIT 10;
+
+--Consulta 8: Listar los nombres de los jugadores que han marcado al menos un gol ('G') en una final de un mundial
+SELECT DISTINCT
+    pe.nombre_jugador AS jugador
+FROM ddbb.ProtagonizaEvento pe
+JOIN ddbb.Partido p
+    ON pe.fecha_hora_partido = p.fecha_hora
+   AND pe.estadio_partido = p.estadio
+WHERE pe.tipo = 'G'
+  AND p.etapa = 'Final';
+
+--Conulta 9: Listar el nombre de los 5 máximos goleadores de todos los mundiales junto con
+--el número de goles anotados (Ordenar del más goleador al menos)
+
+--Consulta 10: Mostrar el resultado el partido de la final del mundial de España, estadio, resultado y fecha
+
+--Consulta 11: Mostrar el jugador que más veces ha sido sustituido
+
+--Consulta 12: Mostrar el jugadores que ha participado en más mundiales
+
+--Consulta 13: Crear una vista que contenga para cada partido jugado en un mundial, la fecha
+--de celebración, el país organizador, el estadio y el resultado
+
+--Consulta 14: Crear una vista que contenga para cada mundial, año y país de celebración, y las
+--selecciones que quedaron en primer, segundo, tercer y cuarto lugar (NOTA:
+--Haced uso de la vista creada en el punto 6)
 
 ROLLBACK;
